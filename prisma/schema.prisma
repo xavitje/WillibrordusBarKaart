@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String      @id @default(cuid())
+  name          String?
+  email         String?     @unique
+  emailVerified DateTime?
+  image         String?
+  role          String      @default("USER") // "USER" or "ADMIN"
+  accounts      Account[]
+  sessions      Session[]
+  ownedCards    OwnedCard[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Custom BarKas Models
+
+model BarCardType {
+  id         String      @id @default(cuid())
+  name       String      // e.g., "15 Biertjes"
+  price      Float       // e.g., 10.00
+  capacity   Int         // e.g., 15
+  isActive   Boolean     @default(true)
+  ownedCards OwnedCard[]
+  createdAt  DateTime    @default(now())
+}
+
+model OwnedCard {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  barCardTypeId  String
+  barCardType    BarCardType @relation(fields: [barCardTypeId], references: [id])
+  remainingUnits Int
+  status         String      @default("ACTIVE") // "ACTIVE", "EXHAUSTED"
+  purchaseDate   DateTime    @default(now())
+}
