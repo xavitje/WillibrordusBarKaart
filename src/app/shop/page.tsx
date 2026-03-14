@@ -47,6 +47,13 @@ export default async function ShopPage() {
     redirect("/dashboard");
   }
 
+  // Map capacity to the correct Stripe Buy Button ID provided by the user
+  const getStripeBuyButtonId = (capacity: number) => {
+    if (capacity === 15) return "buy_btn_1TAqUfBz9620E9lkV1unAheJ";
+    if (capacity === 20) return "buy_btn_1TAqWGBz9620E9lkckcpKJvZ";
+    return ""; // Fallback
+  };
+
   return (
     <div>
       <h1 style={{ color: "var(--primary)", marginBottom: "2rem" }}>Shop - Kaarten Kopen</h1>
@@ -59,24 +66,40 @@ export default async function ShopPage() {
           </p>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "2rem" }}>
-          {cardTypes.map((card: any) => (
-            <div key={card.id} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-              <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{card.name}</h2>
-              <p style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--secondary)", margin: "1rem 0" }}>
-                €{card.price.toFixed(2)}
-              </p>
-              <p style={{ marginBottom: "2rem" }}>Goed voor {card.capacity} drankjes</p>
-              
-              <form action={buyCard} style={{ width: "100%" }}>
-                <input type="hidden" name="cardTypeId" value={card.id} />
-                <button type="submit" className="btn-primary" style={{ width: "100%" }}>
-                  Koop Nu (Demo)
-                </button>
-              </form>
-            </div>
-          ))}
-        </div>
+        <>
+          <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "2rem" }}>
+            {cardTypes.map((card: any) => {
+              const buyBtnId = getStripeBuyButtonId(card.capacity);
+              return (
+                <div key={card.id} className="card" style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+                  <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{card.name}</h2>
+                  <p style={{ fontSize: "2rem", fontWeight: "bold", color: "var(--secondary)", margin: "1rem 0" }}>
+                    €{card.price.toFixed(2)}
+                  </p>
+                  <p style={{ marginBottom: "2rem" }}>Goed voor {card.capacity} drankjes</p>
+                  
+                  {buyBtnId ? (
+                    <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+                      {/* 
+                          We pass BOTH the userId and cardTypeId in the client-reference-id using a colon separator 
+                          This way the webhook instantly knows exactly who bought what without needing to query Stripe APIs 
+                      */}
+                      {/* @ts-ignore - Stripe Custom Element */}
+                      <stripe-buy-button
+                        buy-button-id={buyBtnId}
+                        publishable-key="pk_live_51RvxKEBz9620E9lkg3p5l3jFAG2uHJLFWo7Q5XTITqnudqbE8vcFhx8h1xzj6l7OJQa45KYZ96rmq6X4GfhXNAey00H5JHoBEl"
+                        client-reference-id={`${session?.user?.id}:${card.id}`}
+                      ></stripe-buy-button>
+                    </div>
+                  ) : (
+                    <p style={{ color: "var(--accent-red)" }}>Knoppen nog niet geconfigureerd voor dit type.</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
